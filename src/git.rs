@@ -2,9 +2,9 @@ use azure_devops_rust_lib::models::config::Config;
 use std::fs;
 use crate::AppConfig;
 
-pub async fn export_pull_requests(app_config: &AppConfig, mut config: &mut Config) {
+pub async fn export_pull_requests(app_config: &AppConfig, config: &Config) {
     let repository_id = config.repository_id.clone();
-    let pull_requests_list = get_pull_requests(&mut config, &repository_id).await;
+    let pull_requests_list = get_pull_requests(&config, &repository_id).await;
     let pull_requests_path = format!("{}/{}", &app_config.output_path, "pull_requests");
     fs::create_dir_all(&pull_requests_path).unwrap();
     for (id, pull_request_json_text) in pull_requests_list {
@@ -14,7 +14,7 @@ pub async fn export_pull_requests(app_config: &AppConfig, mut config: &mut Confi
     }
 }
 
-async fn get_pull_requests(config: &mut Config, repository_id: &str) -> Vec<(u32, String)> {
+async fn get_pull_requests(config: &Config, repository_id: &str) -> Vec<(u32, String)> {
 
     let mut pull_requests_json_text_list = Vec::new();
 
