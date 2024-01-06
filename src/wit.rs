@@ -3,80 +3,12 @@ use chrono::{DateTime, Utc};
 use std::fs;
 use crate::AppConfig;
 
-pub async fn export_work_items(app_config: &AppConfig, config: &Config, ids: &Vec<u32>) {
-    let work_items_path = format!("{}/{}", &app_config.output_path, "work_items");
-    let work_item_json_text_list = get_work_items(&config, ids.clone()).await;
-    fs::create_dir_all(&work_items_path).unwrap();
-    for work_item_json_text in work_item_json_text_list {
-        let json: serde_json::Value = serde_json::from_str(&work_item_json_text).unwrap();
-        let id = json["id"].as_u64().unwrap();
-        let file_name = format!("{}.json", id);
-        let file_path = format!("{}/{}", &work_items_path, file_name);
-        fs::write(file_path, work_item_json_text).unwrap();
-    }
+pub async fn export_work_items(root_path: &String, config: &Config, ids: &Vec<u32>) {
+    azure_devops_rust_lib::data_loader::wit::load_work_items(&root_path ,&config, &ids).await;
 }
 
-pub async fn export_work_items_revisions(app_config: &AppConfig, config: &Config, ids: Vec<u32>) {
-    let revisions_json_text_list = get_revisions(&config, ids.clone()).await;
-    let work_items_revisions_path = format!("{}/{}", &app_config.output_path, "work_items_revisions");
-    fs::create_dir_all(&work_items_revisions_path).unwrap();
-    for (id, revisions_json_text) in revisions_json_text_list {
-        let file_name = format!("{}.json", id);
-        let file_path = format!("{}/{}", &work_items_revisions_path, file_name);
-        fs::write(file_path, revisions_json_text).unwrap();
-    }
-}
-
-async fn get_revisions(config: &Config, ids: Vec<u32>) -> Vec<(u32, String)> {
-
-    let mut revisions_json_text_list: Vec<(u32, String)> = Vec::new();
-
-    for id in ids {
-        let json_text = azure_devops_rust_lib::resources::wit::get_workitem_revisions(&config, id).await.unwrap();
-        revisions_json_text_list.push((id, json_text));
-    }
-    revisions_json_text_list
-}
-
-async fn get_work_items(config: &Config, ids: Vec<u32>) -> Vec<String> {
-    // idsを100個ずつのVec<u32>に分割してループ処理する
-    let mut ids_vec = Vec::new();
-
-    let mut i = 0;
-    let mut vec_index = 0;
-    ids_vec.push(Vec::new());
-    for id in ids {
-        ids_vec[vec_index].push(id);
-        i += 1;
-
-        if i == 100 {
-            i = 0;
-            ids_vec.push(Vec::new());
-            vec_index += 1;
-        }
-    }
-
-    let mut work_item_json_text_list = Vec::new();
-
-    // ids_vecでループ処理
-    for ids in ids_vec {
-        let json_text = azure_devops_rust_lib::resources::wit::get_work_items(&config, ids).await.unwrap();
-
-        let json: serde_json::Value = serde_json::from_str(&json_text).unwrap();
-        let work_items = json["value"].as_array().unwrap();
-
-        // work_itemsでループ
-        for work_item in work_items {
-
-
-            println!("{}", work_item["fields"]["System.Title"].as_str().unwrap());
-
-            // Value型からString型に変換する
-            let json_text = serde_json::to_string(&work_item).unwrap();
-            work_item_json_text_list.push(json_text);
-        }
-    }
-    work_item_json_text_list
+pub async fn export_work_items_revisions(root_path: &String, config: &Config, ids: &Vec<u32>) {
+    azure_devops_rust_lib::data_loader::wit::load_work_items_revisions(&root_path ,&config, &ids).await;
 }
 
 pub async fn get_work_items_ids(config: &Config, from_changed_date: DateTime<Utc>) -> Vec<u32> {
@@ -110,64 +42,31 @@ pub async fn get_work_items_ids(config: &Config, from_changed_date: DateTime<Utc
     ids
 }
 
-pub async fn export_fields(app_config: &AppConfig, config: &Config) {
-    let fields_json_text = azure_devops_rust_lib::resources::wit::get_fields(&config).await.unwrap();
-    let fields_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let fields_file_path = format!("{}/{}", &fields_path, "fields.json");
-    fs::create_dir_all(&fields_path).unwrap();
-    fs::write(fields_file_path, fields_json_text).unwrap();
+pub async fn export_fields(root_path: &String, config: &Config) {
+    // /wit/fields
+    azure_devops_rust_lib::data_loader::wit::load_fields(&root_path ,&config).await;
 }
 
-pub async fn export_work_item_categories(app_config: &AppConfig, config: &Config) {
+pub async fn export_work_item_types(root_path: &String, config: &Config) {
+    // wit/workitemtypes/{}/fields
+    // ワーク項目タイプ一覧の取得
+    azure_devops_rust_lib::data_loader::wit::load_work_item_types(&root_path ,&config).await;  
+}
+
+pub async fn export_work_item_categories(root_path: &String, config: &Config) {
+    // /wit/workitemtypecategories
     // カテゴリー一覧の取得
-    let categories_json_text = azure_devops_rust_lib::resources::wit::get_work_item_type_categories(&config).await.unwrap();
-    let categories_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let categories_file_path = format!("{}/{}", &categories_path, "categories.json");
-    fs::create_dir_all(&categories_path).unwrap();
-    fs::write(categories_file_path, categories_json_text).unwrap();   
+    azure_devops_rust_lib::data_loader::wit::load_categories(&root_path ,&config).await;  
 }
 
-pub async fn export_work_item_types(app_config: &AppConfig, config: &Config) {
-   // ワーク項目タイプ一覧の取得
-    let work_item_types_json_text = azure_devops_rust_lib::resources::wit::get_work_item_types(&config).await.unwrap();
-    let work_item_types_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let work_item_types_file_path = format!("{}/{}", &work_item_types_path, "work_item_types.json");
-    fs::create_dir_all(&work_item_types_path).unwrap();
-    fs::write(work_item_types_file_path, work_item_types_json_text).unwrap(); 
-}
-
-pub async fn export_work_item_states(app_config: &AppConfig, config: &Config) {
+pub async fn export_work_item_states(root_path: &String, config: &Config) {
+    // wit/workitemtypes/{type}/states
     // ワーク項目ステート一覧の取得
-    let work_item_states_json_text = azure_devops_rust_lib::resources::wit::get_work_item_type_states(&config, "Bug").await.unwrap();
-    let work_item_states_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let work_item_states_file_path = format!("{}/{}", &work_item_states_path, "work_item_states.json");
-    fs::create_dir_all(&work_item_states_path).unwrap();
-    fs::write(work_item_states_file_path, work_item_states_json_text).unwrap();
+    azure_devops_rust_lib::data_loader::wit::load_work_item_states(&root_path ,&config).await; 
 }
 
-pub async fn export_work_item_areas(app_config: &AppConfig, config: &Config) {
-    // ワーク項目エリアパス一覧の取得
-    let work_item_areas_json_text = azure_devops_rust_lib::resources::wit::get_work_item_type(&config).await.unwrap();
-    let work_item_areas_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let work_item_areas_file_path = format!("{}/{}", &work_item_areas_path, "work_item_areas.json");
-    fs::create_dir_all(&work_item_areas_path).unwrap();
-    fs::write(work_item_areas_file_path, work_item_areas_json_text).unwrap();
-}
-
-pub async fn export_work_item_iterations(app_config: &AppConfig, config: &Config) {
-    // ワーク項目イテレーションパス一覧の取得
-    let work_item_iterations_json_text = azure_devops_rust_lib::resources::wit::get_work_item_type(&config).await.unwrap();
-    let work_item_iterations_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let work_item_iterations_file_path = format!("{}/{}", &work_item_iterations_path, "work_item_iterations.json");
-    fs::create_dir_all(&work_item_iterations_path).unwrap();
-    fs::write(work_item_iterations_file_path, work_item_iterations_json_text).unwrap();
-}
-
-pub(crate) async fn export_classification_nodes(app_config: &AppConfig, config: &Config) {
+pub async fn export_classification_nodes(root_path: &String, config: &Config) {
+    // wit/classificationnodes
     // ワークアイテムの種類一覧を取得する(ClassificationNodes)
-    let work_item_classification_nodes_json_text = azure_devops_rust_lib::resources::wit::get_classification_nodes(&config, 5).await.unwrap();
-    let work_item_classification_nodes_path = format!("{}/{}", &app_config.output_path, "meta_data");
-    let work_item_classification_nodes_file_path = format!("{}/{}", &work_item_classification_nodes_path, "work_item_classification_nodes.json");
-    fs::create_dir_all(&work_item_classification_nodes_path).unwrap();
-    fs::write(work_item_classification_nodes_file_path, work_item_classification_nodes_json_text).unwrap();
+    azure_devops_rust_lib::data_loader::wit::load_classification_nodes(&root_path ,&config).await; 
 }

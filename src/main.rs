@@ -26,36 +26,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config: Config = Config { organization: app_config.organization.clone(), project: app_config.project.clone(), repository_id: app_config.repository_id.clone(), pat: app_config.pat.clone() };
 
     // フィールド一覧を取得する
-    wit::export_fields(&app_config, &config).await;
+    wit::export_fields(&app_config.output_path, &config).await;
 
+    // /wit/workitemtypecategories
     // カテゴリー一覧を取得する
-    wit::export_work_item_categories(&app_config, &config).await;
+    wit::export_work_item_categories(&app_config.output_path, &config).await;
 
+    // /wit/workitemtypes/{type}/fields
     // ワーク項目タイプ一覧を取得する
-    wit::export_work_item_types(&app_config, &config).await;
+    wit::export_work_item_types(&app_config.output_path, &config).await;    
+    
+    // /wit/workitemtypes/{type}/states
+    // WorkItemの状態一覧を取得する
+    wit::export_work_item_states(&app_config.output_path, &config).await;
 
-    // ワーク項目ステート一覧を取得する
-    wit::export_work_item_states(&app_config, &config).await;
+    // wit/classificationnodes
+    // WorkItemの選択肢の一覧を取得する
+    wit::export_classification_nodes(&app_config.output_path, &config).await;
 
-    // ワーク項目エリアパス一覧を取得する
-    wit::export_work_item_areas(&app_config, &config).await;
-
-    // ワーク項目イテレーションパス一覧を取得する
-    wit::export_work_item_iterations(&app_config, &config).await;
-
-    // ワークアイテムの種類一覧を取得する(ClassificationNodes)
-    wit::export_classification_nodes(&app_config, &config).await;
 
     // 取得開始日時を設定
-    let now_utc: DateTime<Utc> = Utc::now() - Duration::days(300);
+    let now_utc: DateTime<Utc> = Utc::now() - Duration::days(30);
 
     // work_itemsのidを取得
     let ids = wit::get_work_items_ids(&config, now_utc).await;
 
     // work_itemsを取得
-    wit::export_work_items(&app_config, &config, &ids).await;
+    wit::export_work_items(&app_config.output_path,  &config, &ids).await;
     // revisionsを取得
-    wit::export_work_items_revisions(&app_config, &config, ids).await;
+    wit::export_work_items_revisions(&app_config.output_path, &config, &ids).await;
     // pull_requestsを取得
     git::export_pull_requests(&app_config, &config).await;
 
