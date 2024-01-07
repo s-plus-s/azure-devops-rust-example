@@ -46,7 +46,7 @@ pub async fn export_fields(root_path: &String, config: &Config) {
 }
 
 pub async fn export_work_item_types(root_path: &String, config: &Config) {
-    // wit/workitemtypes/{}/fields
+    // wit/workitemtypes/
     // ワーク項目タイプ一覧の取得
     azure_devops_rust_lib::data_loader::wit::load_work_item_types(&root_path ,&config).await;  
 }
