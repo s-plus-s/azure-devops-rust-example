@@ -1,7 +1,5 @@
 use azure_devops_rust_lib::models::config::Config;
 use chrono::{DateTime, Utc};
-use std::fs;
-use crate::AppConfig;
 
 pub async fn export_work_items(root_path: &String, config: &Config, ids: &Vec<u32>) {
     azure_devops_rust_lib::data_loader::wit::load_work_items(&root_path ,&config, &ids).await;
