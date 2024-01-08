@@ -5,7 +5,6 @@ use chrono::{DateTime, Duration, Utc};
 extern crate azure_devops_rust_lib;
 use azure_devops_rust_lib::models::config::Config;
 
-mod git;
 mod wit;
 
 #[derive(Serialize, Deserialize)]
@@ -31,6 +30,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         start_date: "".to_string(),
         duration_days: 10,
     };
+
+
+    // /core/projects/list
+    azure_devops_rust_lib::data_loader::projects::load_projects(&app_config.output_path ,&config).await;
+
+    if let Some(project_id) = azure_devops_rust_lib::extract_data::projects::get_project_id(&app_config.output_path, &app_config.project).await {
+        println!("project_id: {}", project_id);
+        azure_devops_rust_lib::data_loader::projects::load_project(&app_config.output_path ,&config, &project_id).await;
+
+        if let Some(process_id) = azure_devops_rust_lib::extract_data::projects::get_process_id(&app_config.output_path).await {
+            println!("process_id: {}", &process_id);
+            azure_devops_rust_lib::data_loader::processes::load_processes(&app_config.output_path ,&config, &process_id).await;
+        }
+        
+    }
+    
 
     // フィールド一覧を取得する
     wit::export_fields(&app_config.output_path, &config).await;
@@ -75,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // revisionsを取得
     wit::export_work_items_revisions(&app_config.output_path, &config, &ids).await;
     // pull_requestsを取得
-    git::export_pull_requests(&app_config, &config).await;
+    azure_devops_rust_lib::data_loader::git::load_pull_requests(&app_config.output_path, &config).await;
 
     Ok(())
 
